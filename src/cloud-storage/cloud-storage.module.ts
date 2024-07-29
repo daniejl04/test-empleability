@@ -3,6 +3,6 @@ import { CloudStorageService } from './cloud-storage.service';
 
 @Module({
   providers: [CloudStorageService],
-  exports: [CloudStorageService], // Exporta el servicio para usarlo en otros módulos
+  exports: [CloudStorageService],
 })
 export class CloudStorageModule {}

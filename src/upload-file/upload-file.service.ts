@@ -15,7 +15,7 @@ export class FilesService {
     private readonly cloudStorageService: CloudStorageService,
   ) {}
 
-  // Main method to process a CSV file.
+
   @ApiOperation({ summary: 'Process a CSV file' })
   @ApiResponse({
     status: 200,
@@ -26,16 +26,14 @@ export class FilesService {
     },
   })
   async processCsv(file: Express.Multer.File): Promise<any> {
-    // Read the content of the uploaded file into memory.
+
     const fileBuffer = fs.readFileSync(file.path);
     
-    // Generate a unique hash for the file based on its content.
     const fileHash = this.cloudStorageService.generateFileKey(
       fileBuffer,
       file.originalname,
     );
 
-    // Check if the file has been processed before.
     const existingLog = await this.logService.findLogByHash(fileHash);
     if (existingLog) {
       // If a log exists, return the stored file from cloud storage.
@@ -44,26 +42,26 @@ export class FilesService {
 
     }
 
-    const results = []; // Array to store processed data.
+    const results = []; 
     return new Promise((resolve, reject) => {
-      // Read the CSV file and process the data.
+
       fs.createReadStream(file.path)
-        .pipe(csv()) // Use csv-parser to convert CSV to object.
-        .on('data', (data) => results.push(data)) // Store each record in the array.
+        .pipe(csv())
+        .on('data', (data) => results.push(data))
         .on('end', async () => {
-          // Remove duplicates and validate the format of the results.
+
           const uniqueResults = this.removeDuplicates(results);
           const validatedResults = this.validateFormat(uniqueResults);
 
-          // Log the request in the database.
+
           await this.logService.logRequest(
-            file.originalname, // filename
-            results.length, // totalRecords
-            validatedResults.length, // processedRecords
-            fileHash, // fileHash
+            file.originalname, 
+            results.length, 
+            validatedResults.length, 
+            fileHash, 
           );
 
-          // Convert validated results to JSON and upload to cloud storage.
+      
           const jsonContent = Buffer.from(JSON.stringify(validatedResults));
           const fileUrl = await this.cloudStorageService.uploadFile(
             fileHash,
@@ -71,19 +69,19 @@ export class FilesService {
             'application/json',
           );
 
-          fs.unlinkSync(file.path); // Delete the temporary file after processing.
+          fs.unlinkSync(file.path);
 
 
-          resolve(validatedResults); // Return the processed results.
+          resolve(validatedResults); 
 
         })
         .on('error', (error) => {
-          reject(error); // Handle errors in reading the file.
+          reject(error); 
         });
     });
   }
 
-  // Method to remove duplicate records from the data.
+
   @ApiOperation({ summary: 'Remove duplicate records' })
   @ApiResponse({
     status: 200,
@@ -93,11 +91,11 @@ export class FilesService {
   removeDuplicates(data: any[]): any[] {
     // Create a unique set from the records.
     const uniqueSet = new Set(data.map((item) => JSON.stringify(item)));
-    return Array.from(uniqueSet).map((item) => JSON.parse(item)); // Convert back to object.
+    return Array.from(uniqueSet).map((item) => JSON.parse(item)); 
   }
 
 
-  // Method to validate that all records have values in all columns.
+
   @ApiOperation({ summary: 'Validate the format of records' })
   @ApiResponse({
     status: 200,
@@ -106,12 +104,12 @@ export class FilesService {
   })
   validateFormat(data: any[]): any[] {
     return data.filter(record => {
-      // Filter records that have non-null and non-empty values.
+
       return Object.values(record).every(value => value !== null && value !== '');
     });
   }
 
-  // Method to sort records by a specific column.
+
   @ApiOperation({ summary: 'Order records by a specific column' })
   @ApiResponse({
     status: 200,
@@ -119,17 +117,17 @@ export class FilesService {
     type: [Object],
   })
   orderBy(data: any[], column: string, order: 'asc' | 'desc'): any[] {
-    // Sort records based on the value of the specified column.
+
     return data.sort((a, b) => {
       const aValue = a[column];
       const bValue = b[column];
 
       if (aValue < bValue) {
-        return order === 'asc' ? -1 : 1; // Determine the order.
+        return order === 'asc' ? -1 : 1;
       } else if (aValue > bValue) {
-        return order === 'asc' ? 1 : -1; // Determine the order.
+        return order === 'asc' ? 1 : -1; 
       }
-      return 0; // They are equal.
+      return 0;
     });
   }
 }
