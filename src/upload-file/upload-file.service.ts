@@ -1,9 +1,9 @@
+import { LogService } from 'src/logs/logs.service';
 import { Injectable } from '@nestjs/common';
-import * as csv from 'csv-parser';
 import * as fs from 'fs';
-import { LogService } from './log.service';
-import { CloudStorageService } from './cloud-storage.service';
-import { Readable } from 'stream';
+import * as csv from 'csv-parser';
+import { CloudStorageService } from 'src/cloud-storage/cloud-storage.service';
+
 
 @Injectable()
 export class ParseCsvService {
@@ -23,8 +23,8 @@ export class ParseCsvService {
     const existingLog = await this.logService.findLogByHash(fileHash);
     if (existingLog) {
       // Retornar archivo almacenado en la nube
-      const storedFile = await this.cloudStorageService.getFile(fileHash);
-      return storedFile;
+      const storedFileUrl = await this.cloudStorageService.getFile(fileHash);
+      return { url: storedFileUrl };
     }
 
     const results = [];
@@ -37,15 +37,15 @@ export class ParseCsvService {
           const validatedResults = this.validateFormat(uniqueResults);
 
           await this.logService.logRequest(
-            file.originalname,
-            results.length,
-            validatedResults.length,
-            fileHash,
+            file.originalname, // filename
+            results.length, // totalRecords
+            validatedResults.length, // processedRecords
+            fileHash, // fileHash
           );
 
           // Convertir a JSON y subir a la nube
           const jsonContent = Buffer.from(JSON.stringify(validatedResults));
-          await this.cloudStorageService.uploadFile(
+          const fileUrl = await this.cloudStorageService.uploadFile(
             fileHash,
             jsonContent,
             'application/json',
@@ -53,7 +53,7 @@ export class ParseCsvService {
 
           fs.unlinkSync(file.path); // Eliminar archivo después de procesar
 
-          resolve(validatedResults);
+          resolve({ url: fileUrl });
         })
         .on('error', (error) => {
           reject(error);
@@ -61,9 +61,17 @@ export class ParseCsvService {
     });
   }
 
-  removeDuplicates(data: any[]): any[] {
+  private removeDuplicates(data: any[]): any[] {
     const uniqueSet = new Set(data.map((item) => JSON.stringify(item)));
     return Array.from(uniqueSet).map((item) => JSON.parse(item));
   }
 
+  private validateFormat(data: any[]): any[] {
+    // Aquí puedes definir la validación del formato según tus necesidades
+    // Por ejemplo, asegurarte de que cada objeto tenga todas las propiedades necesarias
+    return data.filter((row) => {
+      // Asegúrate de que cada columna tenga datos (esto es solo un ejemplo)
+      return Object.values(row).every((value) => value !== '' && value != null);
+    });
+  }
 }
