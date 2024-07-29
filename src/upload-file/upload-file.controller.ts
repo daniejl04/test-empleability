@@ -1,34 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UploadFileService } from './upload-file.service';
-import { CreateUploadFileDto } from './dto/create-upload-file.dto';
-import { UpdateUploadFileDto } from './dto/update-upload-file.dto';
+import {
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+  Response,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ParseCsvService } from './parse-csv.service';
+import { Response as Res } from 'express';
 
-@Controller('upload-file')
-export class UploadFileController {
-  constructor(private readonly uploadFileService: UploadFileService) {}
+@Controller('files')
+export class FilesController {
+  constructor(private readonly parseCsvService: ParseCsvService) {}
 
-  @Post()
-  create(@Body() createUploadFileDto: CreateUploadFileDto) {
-    return this.uploadFileService.create(createUploadFileDto);
-  }
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Response() res: Res,
+  ) {
+    try {
+      const result = await this.parseCsvService.processCsv(file);
 
-  @Get()
-  findAll() {
-    return this.uploadFileService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.uploadFileService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUploadFileDto: UpdateUploadFileDto) {
-    return this.uploadFileService.update(+id, updateUploadFileDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.uploadFileService.remove(+id);
+      // Configurar el encabezado count y enviar la respuesta JSON
+      res.setHeader('count', result.length);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: 'Error al procesar el archivo', error });
+    }
   }
 }
