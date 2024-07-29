@@ -1,9 +1,12 @@
+import { LogService } from 'src/logs/logs.service';
 import { Injectable } from '@nestjs/common';
-import * as csv from 'csv-parser';
 import * as fs from 'fs';
+import * as csv from 'csv-parser';
+import { CloudStorageService } from 'src/cloud-storage/cloud-storage.service';
 import { LogService } from './log.service';
 import { CloudStorageService } from './cloud-storage.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+
 
 @ApiTags('files')
 @Injectable()
@@ -39,6 +42,7 @@ export class FilesService {
       // If a log exists, return the stored file from cloud storage.
       const storedFile = await this.cloudStorageService.getFile(fileHash);
       return storedFile;
+
     }
 
     const results = []; // Array to store processed data.
@@ -54,15 +58,15 @@ export class FilesService {
 
           // Log the request in the database.
           await this.logService.logRequest(
-            file.originalname,
-            results.length,
-            validatedResults.length,
-            fileHash,
+            file.originalname, // filename
+            results.length, // totalRecords
+            validatedResults.length, // processedRecords
+            fileHash, // fileHash
           );
 
           // Convert validated results to JSON and upload to cloud storage.
           const jsonContent = Buffer.from(JSON.stringify(validatedResults));
-          await this.cloudStorageService.uploadFile(
+          const fileUrl = await this.cloudStorageService.uploadFile(
             fileHash,
             jsonContent,
             'application/json',
@@ -70,7 +74,9 @@ export class FilesService {
 
           fs.unlinkSync(file.path); // Delete the temporary file after processing.
 
+
           resolve(validatedResults); // Return the processed results.
+
         })
         .on('error', (error) => {
           reject(error); // Handle errors in reading the file.
@@ -90,6 +96,7 @@ export class FilesService {
     const uniqueSet = new Set(data.map((item) => JSON.stringify(item)));
     return Array.from(uniqueSet).map((item) => JSON.parse(item)); // Convert back to object.
   }
+
 
   // Method to validate that all records have values in all columns.
   @ApiOperation({ summary: 'Validate the format of records' })
