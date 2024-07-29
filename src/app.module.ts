@@ -3,9 +3,20 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UploadFileModule } from './upload-file/upload-file.module';
 import { LogsModule } from './logs/logs.module';
+import { PersistenceModule } from './persistence/persistence.module';
+import { ConfigModule } from '@nestjs/config';
+import dbConfig from './persistence/db-config';
+
 
 @Module({
-  imports: [UploadFileModule, LogsModule],
+  imports: [
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+      load: [dbConfig],
+      isGlobal: true,
+    }),
+    PersistenceModule, UploadFileModule, LogsModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
