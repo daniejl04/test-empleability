@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import * as cloudinary from 'cloudinary';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Injectable()
 export class CloudStorageService {
@@ -16,6 +17,8 @@ export class CloudStorageService {
     });
   }
 
+  @UseInterceptors(FileInterceptor('file'))
+  @UsePipes(new ValidationPipe () )
   async uploadFile(
     key: string,
     content: Buffer,
