@@ -16,7 +16,10 @@ import dbConfig from './persistence/db-config';
       load: [dbConfig],
       isGlobal: true,
     }),
-    PersistenceModule, UploadFileModule, LogsModule, CloudStorageModule
+    PersistenceModule,
+    UploadFileModule, 
+    LogsModule, 
+    CloudStorageModule
   ],
   controllers: [AppController],
   providers: [AppService],
